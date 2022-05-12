@@ -2,13 +2,49 @@
 
 #![warn(missing_docs)]
 
-use petgraph::{graph::NodeIndex, Graph};
+use petgraph::graph::{IndexType, NodeIndex};
+use petgraph::{EdgeType, Graph};
+use rand::prelude::SliceRandom;
+use std::collections::HashMap;
+
+const MAX_DENSITY: f32 = 1.0;
+
+const THRESHOLD: f32 = 0.0001;
+
+const DEFAULT_ITER: u8 = 100;
 
 /// Fluid Communities - A highly scalable community detection algorithm.
 pub fn fluidc<N, E, Ty, Ix>(
     graph: &Graph<N, E, Ty, Ix>,
-    communities: u8,
+    max_communities: usize,
     max_iter: Option<u8>,
-) -> impl Iterator<Item = (u8, NodeIndex)> {
+) -> impl Iterator<Item = (u8, NodeIndex)>
+where
+    Ty: EdgeType,
+    Ix: IndexType,
+{
+    // --- Establish initial randomness --- //
+    let mut rng = rand::thread_rng();
+    let mut vertices: Vec<_> = graph.node_indices().collect();
+    vertices.shuffle(&mut rng);
+
+    // --- Establish initial communities --- //
+    let mut density = HashMap::new();
+    let mut com_to_numvertices = HashMap::new();
+    let communities: HashMap<NodeIndex<Ix>, usize> = vertices[0..max_communities]
+        .into_iter()
+        .enumerate()
+        .map(|(i, n)| (*n, i))
+        .collect();
+    for i in communities.values() {
+        com_to_numvertices.insert(i, 1);
+        density.insert(i, MAX_DENSITY);
+    }
+
+    // --- Produce progressively more accurate communities --- //
+    for i in 0..(max_iter.unwrap_or(DEFAULT_ITER)) {
+        //
+    }
+
     std::iter::empty()
 }
