@@ -18,7 +18,7 @@ pub fn fluidc<N, E, Ty, Ix>(
     graph: &Graph<N, E, Ty, Ix>,
     max_communities: usize,
     max_iter: Option<u8>,
-) -> impl Iterator<Item = (u8, NodeIndex)>
+) -> HashMap<usize, Vec<NodeIndex<Ix>>>
 where
     Ty: EdgeType,
     Ix: IndexType,
@@ -43,8 +43,14 @@ where
 
     // --- Produce progressively more accurate communities --- //
     for i in 0..(max_iter.unwrap_or(DEFAULT_ITER)) {
-        //
+        vertices.shuffle(&mut rng);
     }
 
-    std::iter::empty()
+    // --- Invert accumulated results --- //
+    let mut res: HashMap<usize, Vec<_>> = HashMap::new();
+    for (ix, com) in communities.into_iter() {
+        let entry = res.entry(com).or_default();
+        entry.push(ix);
+    }
+    res
 }
