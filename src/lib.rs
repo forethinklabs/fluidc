@@ -13,14 +13,15 @@ const THRESHOLD: f32 = 0.0001;
 
 const DEFAULT_ITER: u8 = 100;
 
-type Community = usize;
+/// Unique communities.
+pub type Community = usize;
 
 /// Fluid Communities - A highly scalable community detection algorithm.
 pub fn fluidc<N, E, Ty, Ix>(
     graph: &Graph<N, E, Ty, Ix>,
     max_communities: usize,
     max_iter: Option<u8>,
-) -> HashMap<usize, Vec<NodeIndex<Ix>>>
+) -> HashMap<Community, Vec<NodeIndex<Ix>>>
 where
     Ty: EdgeType,
     Ix: IndexType,
@@ -45,6 +46,7 @@ where
 
     // --- Produce progressively more accurate communities --- //
     for _ in 0..(max_iter.unwrap_or(DEFAULT_ITER)) {
+        let mut cont = false;
         vertices.shuffle(&mut rng);
 
         for vertex in vertices.iter() {
@@ -53,9 +55,7 @@ where
             // --- Take into account self vertex community --- //
             if let Some(com) = communities.get(vertex) {
                 if let Some(den) = density.get(com) {
-                    if com_counter.contains_key(com) {
-                        com_counter.entry(*com).and_modify(|d| *d += den);
-                    }
+                    com_counter.entry(*com).and_modify(|d| *d += den);
                 }
             }
 
@@ -64,9 +64,7 @@ where
             for v in graph.neighbors_undirected(*vertex) {
                 if let Some(com) = communities.get(&v) {
                     if let Some(den) = density.get(com) {
-                        if com_counter.contains_key(com) {
-                            com_counter.entry(*com).and_modify(|d| *d += den);
-                        }
+                        com_counter.entry(*com).and_modify(|d| *d += den);
                     }
                 }
             }
@@ -85,8 +83,10 @@ where
                     .and_then(|com| best_communities.contains(com).then(|| ()))
                     .is_none()
                 {
-                    // TODO Handle halting via `cont`.
                     // --- If vertex community changes... --- //
+                    // --- Set flag of non-convergence --- //
+                    cont = true;
+
                     // FIXME Panic risk! How do we know this isn't empty?
                     let new_com = best_communities.choose(&mut rng).unwrap();
 
@@ -110,10 +110,14 @@ where
                 }
             }
         }
+
+        if !cont {
+            break;
+        }
     }
 
     // --- Invert accumulated results --- //
-    let mut res: HashMap<usize, Vec<_>> = HashMap::new();
+    let mut res: HashMap<Community, Vec<_>> = HashMap::new();
     for (ix, com) in communities.into_iter() {
         let entry = res.entry(com).or_default();
         entry.push(ix);
